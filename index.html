@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Eco-Run: Misión Bogotá</title>
+    <style>
+        :root {
+            --primary: #00ffcc;
+            --secondary: #0f3460;
+            --accent: #e94560;
+            --bg-dark: #1a1a2e;
+            --text: #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text); overflow: hidden; }
+
+        /* HEADER STATS */
+        header {
+            position: fixed; top: 0; left: 0; width: 100%; height: 60px;
+            background: rgba(15, 52, 96, 0.95); display: flex; justify-content: space-between;
+            align-items: center; padding: 0 10px; z-index: 100; border-bottom: 2px solid var(--primary);
+        }
+        .stat { font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+        .eco-coins { color: #ffd700; }
+        .progress-text { font-size: 11px; color: #aaa; margin-left: 3px; font-weight: normal; }
+
+        /* BOTTOM NAV */
+        nav {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 70px;
+            background: rgba(15, 52, 96, 0.95); display: flex; justify-content: space-around;
+            align-items: center; z-index: 100; border-top: 2px solid var(--primary);
+        }
+        .nav-btn {
+            background: none; border: none; color: #888; font-size: 13px;
+            display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;
+            transition: 0.3s; width: 25%;
+        }
+        .nav-btn i { font-size: 22px; font-style: normal; }
+        .nav-btn.active { color: var(--primary); transform: translateY(-3px); }
+
+        /* SCREENS */
+        .screen {
+            position: absolute; top: 60px; left: 0; width: 100vw; height: calc(100vh - 130px);
+            display: none; flex-direction: column; align-items: center; overflow-y: auto;
+            background: var(--bg-dark); padding: 20px;
+        }
+        .screen.active { display: flex; }
+
+        /* SCREEN 1: GAME */
+        #game-screen { padding: 0; overflow: hidden; background: #16213e; }
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        /* OVERLAYS DE PANTALLAS */
+        .game-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(26,26,46,0.97); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 50; text-align: center;
+            padding: 20px;
+        }
+        .hidden { display: none !important; }
+
+        /* PORTADA */
+        .cover-title {
+            font-size: 36px; color: var(--primary); font-weight: 900;
+            text-shadow: 0 0 20px rgba(0, 255, 204, 0.6); margin-bottom: 5px;
+        }
+        .cover-subtitle {
+            font-size: 15px; color: #ffd700; margin-bottom: 20px; letter-spacing: 2px;
+        }
+        .logo-box {
+            font-size: 75px; margin-bottom: 15px; animation: floatAnim 2s infinite alternate ease-in-out;
+        }
+        @keyframes floatAnim {
+            from { transform: translateY(0px); }
+            to { transform: translateY(-12px); }
+        }
+
+        /* GUÍA DE INSTRUCCIONES */
+        .instructions-card {
+            background: var(--secondary); border-radius: 15px; padding: 15px;
+            width: 100%; max-width: 380px; border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px; text-align: left;
+        }
+        .guide-row {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+            background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: 10px;
+        }
+        .guide-row:last-child { margin-bottom: 0; }
+        .guide-row .icons { font-size: 22px; white-space: nowrap; max-width: 85px; overflow: hidden; }
+        .guide-row .desc { font-size: 12px; color: #ccc; line-height: 1.35; }
+        .guide-row .desc strong { color: #fff; display: block; font-size: 13px; margin-bottom: 2px; }
+
+        /* Advertencia de Choque */
+        #warning-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(233, 69, 96, 0.9); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 60; text-align: center;
+            animation: pulseBg 0.4s infinite alternate;
+        }
+        @keyframes pulseBg {
+            from { background: rgba(233, 69, 96, 0.85); }
+            to { background: rgba(180, 20, 50, 0.95); }
+        }
+        .warning-card {
+            background: #1a1a2e; border: 4px solid #ff004c; border-radius: 20px;
+            padding: 25px; width: 85%; max-width: 400px; box-shadow: 0 0 30px rgba(255, 0, 76, 0.8);
+        }
+
+        /* Selector de Personajes Ampliado */
+        .char-selector {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+            margin: 15px 0 25px 0; max-width: 340px;
+        }
+        .char-btn {
+            font-size: 32px; background: rgba(0,0,0,0.4); border-radius: 12px;
+            padding: 8px; cursor: pointer; transition: 0.2s; border: 2px solid transparent;
+            text-align: center;
+        }
+        .char-btn.active { background: rgba(0, 255, 204, 0.25); border-color: var(--primary); transform: scale(1.1); }
+        
+        .btn-action {
+            background: var(--primary); color: var(--bg-dark); border: none; padding: 14px 35px;
+            font-size: 18px; font-weight: bold; border-radius: 30px; cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,255,204,0.4); transition: 0.2s;
+        }
+        .btn-action:active { transform: scale(0.95); }
+
+        /* MÓDULOS SECUNDARIOS */
+        .scanner-box { width: 280px; height: 280px; border: 4px dashed var(--primary); margin: 20px 0; position: relative; display: flex; justify-content: center; align-items: center; background: rgba(0, 255, 204, 0.05); border-radius: 20px; }
+        .scanner-line { position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--primary); box-shadow: 0 0 10px var(--primary); animation: scan 2s infinite linear; display: none; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        .location-card { background: var(--secondary); padding: 15px; border-radius: 10px; width: 100%; text-align: center; margin-bottom: 20px; border-left: 5px solid var(--accent); }
+        .city-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; margin-top: 20px; }
+        .city-item { background: var(--secondary); padding: 15px; border-radius: 15px; text-align: center; border: 2px solid transparent; transition: 0.3s; }
+        .city-item.bought { border-color: var(--primary); background: rgba(0, 255, 204, 0.1); }
+        .city-item h3 { font-size: 15px; margin: 8px 0; }
+        .buy-btn { background: #ffd700; color: #000; border: none; padding: 8px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; }
+        .city-item.bought .buy-btn { background: var(--primary); pointer-events: none; }
+        .leaderboard { width: 100%; max-width: 500px; background: var(--secondary); border-radius: 15px; overflow: hidden; margin-top: 20px; }
+        .rank-item { display: flex; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    </style>
+</head>
+<body>
+
+    <!-- CABECERA DE ESTADÍSTICAS -->
+    <header>
+        <div class="stat" style="color: #ff4757;">Vidas: <span id="ui-lives">❤️❤️❤️</span></div>
+        <div class="stat">
+            🏆 Nvl: <span id="ui-level">1</span>
+            <span id="ui-progress" class="progress-text">(0/1500)</span>
+        </div>
+        <div class="stat eco-coins">🪙 <span id="ui-coins">0</span></div>
+    </header>
+
+    <!-- PANTALLA 1: JUEGO -->
+    <div id="screen-game" class="screen active">
+        <!-- Puntuación en vivo -->
+        <div style="position: absolute; top: 10px; width: 100%; text-align: center; z-index: 10; pointer-events: none;">
+            <h2 style="color: rgba(255,255,255,0.5); font-size: 12px;">Desliza para cambiar de carril</h2>
+            <h2 style="color: #00ffcc; font-size: 26px; font-weight: 900; text-shadow: 0 0 10px #00ffcc;" id="game-score">0 pts</h2>
+        </div>
+        
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- 1. PORTADA INICIAL -->
+        <div id="cover-overlay" class="game-overlay">
+            <div class="logo-box">🍪🏃‍♂️</div>
+            <h1 class="cover-title">ECO-RUN</h1>
+            <h2 class="cover-subtitle">MISIÓN BOGOTÁ</h2>
+            <p style="color: #aaa; font-size: 13px; max-width: 290px; margin-bottom: 25px; line-height: 1.4;">
+                Recolecta empaques de flexible/polipropileno metalizado y llena la Botella de Amor para Bogotá.
+            </p>
+            <button class="btn-action" onclick="showInstructions()">🎮 JUGAR</button>
+        </div>
+
+        <!-- 2. INSTRUCCIONES DEL JUEGO -->
+        <div id="instructions-overlay" class="game-overlay hidden">
+            <h1 style="color: var(--primary); font-size: 24px; margin-bottom: 12px;">¿Qué Recolectar?</h1>
+            
+            <div class="instructions-card">
+                <div class="guide-row" style="border-left: 4px solid #00ffcc;">
+                    <div class="icons">🍟🍬🍫🍿</div>
+                    <div class="desc">
+                        <strong style="color: #00ffcc;">✅ POLIPROPILENO METALIZADO</strong>
+                        Empaques de papitas, galletas, chocolates, dulces y snacks. <strong>+5 Eco-Coins</strong>.
+                    </div>
+                </div>
+
+                <div class="guide-row" style="border-left: 4px solid #ff4757;">
+                    <div class="icons">🍎🍌🍕🦴</div>
+                    <div class="desc">
+                        <strong style="color: #ff4757;">❌ BASURA Y ORGÁNICOS</strong>
+                        Comida, cáscaras y papel sucio dañan el reciclaje. <strong>-1 Vida</strong>.
+                    </div>
+                </div>
+
+                <div class="guide-row" style="border-left: 4px solid #ffd700;">
+                    <div class="icons">👈📱👉</div>
+                    <div class="desc">
+                        <strong style="color: #ffd700;">🎮 CONTROLES</strong>
+                        Desliza a los lados o usa las teclas <strong>← →</strong> para moverte.
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-action" onclick="showCharSelector()">SELECCIONAR AVATAR 👍</button>
+        </div>
+
+        <!-- 3. SELECTOR DE PERSONAJE AMPLIA MÁS VARIEDAD -->
+        <div id="start-overlay" class="game-overlay hidden">
+            <h1 style="color: var(--primary); font-size: 26px;">Elige tu Personaje</h1>
+            <p style="color: #ccc; font-size: 12px; margin-top: 4px;">Selecciona tu avatar para guardar tu avance.</p>
+            
+            <div class="char-selector">
+                <span class="char-btn active" onclick="selectChar('👦', this)">👦</span>
+                <span class="char-btn" onclick="selectChar('👧', this)">👧</span>
+                <span class="char-btn" onclick="selectChar('👨‍🎤', this)">👨‍🎤</span>
+                <span class="char-btn" onclick="selectChar('👩‍🌾', this)">👩‍🌾</span>
+                <span class="char-btn" onclick="selectChar('🥷', this)">🥷</span>
+                <span class="char-btn" onclick="selectChar('🦸‍♂️', this)">🦸‍♂️</span>
+                <span class="char-btn" onclick="selectChar('🧙‍♂️', this)">🧙‍♂️</span>
+                <span class="char-btn" onclick="selectChar('🤖', this)">🤖</span>
+                <span class="char-btn" onclick="selectChar('👽', this)">👽</span>
+                <span class="char-btn" onclick="selectChar('🦊', this)">🦊</span>
+                <span class="char-btn" onclick="selectChar('🐼', this)">🐼</span>
+                <span class="char-btn" onclick="selectChar('🦁', this)">🦁</span>
+            </div>
+            
+            <button class="btn-action" onclick="startGame()">▶️ ¡A CORRER!</button>
+        </div>
+
+        <!-- Cartel de Pausa / Advertencia -->
+        <div id="warning-overlay" class="hidden">
+            <div class="warning-card">
+                <h1 style="color: #ff004c; font-size: 26px; margin-bottom: 5px;">⚠️ ¡CUIDADO!</h1>
+                <span id="warn-emoji" style="font-size: 70px; display: block; margin: 10px 0;">🍎</span>
+                <p style="font-size: 14px; line-height: 1.4; color: #fff; margin-bottom: 15px;">
+                    ¡Atrapaste un residuo no reciclable!<br>Contamina la recolección. <strong>-1 Vida</strong>
+                </p>
+                <div style="font-size: 18px; font-weight: bold; color: #00ffcc;" id="warn-timer">Reanudando en 1.5s...</div>
+            </div>
+        </div>
+
+        <!-- Pantalla de Derrota -->
+        <div id="game-over-overlay" class="game-overlay hidden">
+            <h1 style="color: var(--accent); font-size: 36px; margin-bottom: 10px; text-shadow: 0 0 15px var(--accent);">¡Fin del Recorrido!</h1>
+            <p style="font-size: 15px; margin-bottom: 20px; text-align: center; color: #ccc;">
+                Te quedaste sin vidas. ¡Sigue limpiando Bogotá!
+            </p>
+            <h2 style="color: #ffd700; margin-bottom: 8px; font-size: 26px;">Monedas: +<span id="end-coins">0</span> 🪙</h2>
+            <h3 style="color: #00ffcc; margin-bottom: 25px; font-size: 18px;">Puntos Ranking: +<span id="end-pts">0</span> pts</h3>
+            <button class="btn-action" onclick="showCover()">🔄 Volver a Inicio</button>
+        </div>
+    </div>
+
+    <!-- PANTALLA 2: ESCÁNER -->
+    <div id="screen-scan" class="screen">
+        <h1 style="color: var(--primary); margin-bottom: 10px;">Puntos de Acopio</h1>
+        <p style="text-align: center; margin-bottom: 20px; font-size: 13px; color: #ccc;">Lleva tus empaques de polipropileno metalizado limpios y compactados a un punto real.</p>
+        <div class="location-card">
+            <h3 style="color: var(--primary);">📍 Fundación Botellas de Amor</h3>
+            <p style="font-size: 13px; color: #aaa;">Puntos autorizados en Bogotá</p>
+            <p style="font-size: 12px; margin-top: 5px; color: #ffd700;">Recompensa: +1000 🪙 / Kilo</p>
+        </div>
+        <div class="scanner-box">
+            <div class="scanner-line" id="scanner-line"></div>
+            <i style="font-size: 60px; color: rgba(255,255,255,0.2);" id="scanner-icon">📷</i>
+        </div>
+        <button class="btn-action" id="btn-scan" onclick="simulateScan()">Simular Escaneo QR</button>
+        <p id="scan-msg" style="color: var(--primary); margin-top: 15px; font-weight: bold; font-size: 16px; display: none;">¡Excelente! +1000 🪙 depositados</p>
+    </div>
+
+    <!-- PANTALLA 3: CIUDAD -->
+    <div id="screen-city" class="screen">
+        <h1 style="color: var(--primary);">Ciudad Sostenible</h1>
+        <p style="text-align: center; font-size: 13px; color: #ccc; margin-top: 5px;">¡Invierte tus monedas en proyectos ecológicos para Bogotá!</p>
+        <div class="city-grid">
+            <div class="city-item" id="item-1">
+                <i style="font-size: 35px;">🌳</i><h3>Parque Ecológico</h3>
+                <p style="font-size: 11px; color: #aaa; margin-bottom: 8px;">+500 Puntos</p>
+                <button class="buy-btn" data-price="500" onclick="buyItem('item-1', 500)">500 🪙</button>
+            </div>
+            <div class="city-item" id="item-2">
+                <i style="font-size: 35px;">☀️</i><h3>Paneles Solares</h3>
+                <p style="font-size: 11px; color: #aaa; margin-bottom: 8px;">+1500 Puntos</p>
+                <button class="buy-btn" data-price="1500" onclick="buyItem('item-2', 1500)">1500 🪙</button>
+            </div>
+            <div class="city-item" id="item-3">
+                <i style="font-size: 35px;">🚌</i><h3>Bus Eléctrico</h3>
+                <p style="font-size: 11px; color: #aaa; margin-bottom: 8px;">+3000 Puntos</p>
+                <button class="buy-btn" data-price="3000" onclick="buyItem('item-3', 3000)">3000 🪙</button>
+            </div>
+            <div class="city-item" id="item-4">
+                <i style="font-size: 35px;">♻</i><h3>Planta Reciclaje</h3>
+                <p style="font-size: 11px; color: #aaa; margin-bottom: 8px;">+5000 Puntos</p>
+                <button class="buy-btn" data-price="5000" onclick="buyItem('item-4', 5000)">5000 🪙</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 4: RANKING -->
+    <div id="screen-rank" class="screen">
+        <h1 style="color: var(--primary);">Liga Intercolegial</h1>
+        <p style="text-align: center; font-size: 13px; color: #ccc; margin-top: 5px;">Compite sumando puntos en tus carreras.</p>
+        <div class="leaderboard" id="ranking-list">
+            <!-- Se llena dinámicamente -->
+        </div>
+    </div>
+
+    <!-- BARRA INFERIOR DE NAVEGACIÓN -->
+    <nav>
+        <button class="nav-btn active" onclick="switchTab('game')"><i>🎮</i><span>Jugar</span></button>
+        <button class="nav-btn" onclick="switchTab('scan')"><i>📷</i><span>Escanear</span></button>
+        <button class="nav-btn" onclick="switchTab('city')"><i>🏙️</i><span>Ciudad</span></button>
+        <button class="nav-btn" onclick="switchTab('rank')"><i>🏆</i><span>Ranking</span></button>
+    </nav>
+
+    <script>
+        // ==========================================
+        // FLUJO DE NAVEGACIÓN
+        // ==========================================
+        function showCover() {
+            document.getElementById("game-over-overlay").classList.add("hidden");
+            document.getElementById("instructions-overlay").classList.add("hidden");
+            document.getElementById("start-overlay").classList.add("hidden");
+            document.getElementById("cover-overlay").classList.remove("hidden");
+        }
+
+        function showInstructions() {
+            document.getElementById("cover-overlay").classList.add("hidden");
+            document.getElementById("instructions-overlay").classList.remove("hidden");
+        }
+
+        function showCharSelector() {
+            document.getElementById("instructions-overlay").classList.add("hidden");
+            document.getElementById("start-overlay").classList.remove("hidden");
+        }
+
+
+        // ==========================================
+        // SISTEMA DE USUARIOS Y RANKING
+        // ==========================================
+        let usersData = JSON.parse(localStorage.getItem('ecoRunUsers')) || {};
+        let playerEmoji = "👦";
+        let lives = 3;
+
+        function updateGlobalUI() {
+            if(!usersData[playerEmoji]) {
+                usersData[playerEmoji] = { coins: 0, points: 0, items: [] };
+            }
+
+            let user = usersData[playerEmoji];
+            
+            let currentLevel = Math.floor(user.points / 1500) + 1;
+            let nextLevelPoints = currentLevel * 1500;
+            
+            document.getElementById("ui-coins").innerText = user.coins;
+            document.getElementById("ui-level").innerText = currentLevel;
+            document.getElementById("ui-progress").innerText = `(${user.points}/${nextLevelPoints} pts)`;
+            document.getElementById("ui-lives").innerText = "❤️".repeat(Math.max(0, lives));
+            
+            localStorage.setItem('ecoRunUsers', JSON.stringify(usersData));
+            
+            renderCity();
+            renderRanking();
+        }
+
+        function selectChar(emoji, btnElement) {
+            playerEmoji = emoji;
+            document.querySelectorAll('.char-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            updateGlobalUI();
+        }
+
+        function renderCity() {
+            let user = usersData[playerEmoji] || { coins: 0, points: 0, items: [] };
+            document.querySelectorAll('.city-item').forEach(item => {
+                let id = item.id;
+                let btn = item.querySelector('.buy-btn');
+                if (user.items.includes(id)) {
+                    item.classList.add('bought');
+                    btn.innerText = "Comprado";
+                } else {
+                    item.classList.remove('bought');
+                    btn.innerText = btn.getAttribute('data-price') + " 🪙";
+                }
+            });
+        }
+
+        function renderRanking() {
+            let leaderboard = [
+                { name: "Colegio San Jorge", points: 12500, icon: "🏫", isMe: false },
+                { name: "Liceo Bogotá", points: 8900, icon: "🏫", isMe: false },
+                { name: "Inst. Técnico", points: 4200, icon: "🏫", isMe: false }
+            ];
+
+            for (const [emoji, data] of Object.entries(usersData)) {
+                if (data.points > 0 || emoji === playerEmoji) {
+                    leaderboard.push({ 
+                        name: `Jugador (${emoji})`, 
+                        points: data.points, 
+                        icon: emoji, 
+                        isMe: emoji === playerEmoji 
+                    });
+                }
+            }
+
+            leaderboard.sort((a, b) => b.points - a.points);
+            
+            const listDiv = document.getElementById('ranking-list');
+            listDiv.innerHTML = "";
+            let rank = 1;
+
+            leaderboard.forEach(item => {
+                let medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}️⃣`;
+                let bg = item.isMe ? "rgba(0, 255, 204, 0.2)" : (rank === 1 ? "rgba(255, 215, 0, 0.2)" : "transparent");
+                let color = item.isMe ? "var(--primary)" : (rank === 1 ? "#ffd700" : "#fff");
+                let weight = item.isMe || rank === 1 ? "bold" : "normal";
+                
+                listDiv.innerHTML += `
+                    <div class="rank-item" style="background: ${bg}; color: ${color}; font-weight: ${weight};">
+                        <span>${medal} ${item.name}</span>
+                        <span>${item.points} pts</span>
+                    </div>
+                `;
+                rank++;
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`screen-${tabId}`).classList.add('active');
+            event.currentTarget.classList.add('active');
+            if(tabId !== 'game') { isGameRunning = false; }
+            updateGlobalUI();
+        }
+
+        // ==========================================
+        // MÓDULOS DE ESCÁNER Y COMPRA
+        // ==========================================
+        function simulateScan() {
+            const btn = document.getElementById("btn-scan");
+            btn.disabled = true; document.getElementById("scanner-line").style.display = "block";
+            document.getElementById("scanner-icon").innerText = "🔄";
+            setTimeout(() => {
+                document.getElementById("scanner-line").style.display = "none";
+                document.getElementById("scanner-icon").innerText = "✅";
+                document.getElementById("scan-msg").style.display = "block";
+                
+                usersData[playerEmoji].coins += 1000; 
+                updateGlobalUI(); 
+                
+                btn.disabled = false;
+                setTimeout(() => { document.getElementById("scanner-icon").innerText = "📷"; document.getElementById("scan-msg").style.display = "none"; }, 3000);
+            }, 2000);
+        }
+
+        function buyItem(itemId, price) {
+            let user = usersData[playerEmoji];
+            if (user.items.includes(itemId)) return;
+
+            if (user.coins >= price) {
+                user.coins -= price;       
+                user.points += price;      
+                user.items.push(itemId);   
+                updateGlobalUI();
+            } else {
+                alert("¡No tienes suficientes Eco-Coins!");
+            }
+        }
+
+
+        // ==========================================
+        // MOTOR DEL JUEGO RUNNER
+        // ==========================================
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        
+        let isGameRunning = false;
+        let isWarningActive = false;
+        let animationId;
+        let warningTimerInterval = null;
+        
+        let lanes = [];
+        let currentLane = 1;
+        let playerActualX = 0;
+        let runPoints = 0;
+        let sessionCoins = 0;
+        let gameSpeed = 8;
+        let obstacles = [];
+        let speedLines = [];
+        
+        // EMPAQUES DE POLIPROPILENO METALIZADO (BUENOS)
+        const goodItems = ["🍟", "🍬", "🍫", "🍿", "🍪", "🥨", "🍩", "🍦", "🥜"];
+        // RESIDUOS ORGÁNICOS Y NO RECICLABLES DE ESTE TIPO (MALOS)
+        const badItems = ["🍎", "🍌", "🦴", "🍕", "🍉", "🥑", "🧻", "🥦"];
+
+        function resizeCanvas() {
+            canvas.width = document.getElementById("screen-game").clientWidth;
+            canvas.height = document.getElementById("screen-game").clientHeight;
+            lanes = [canvas.width * 0.2, canvas.width * 0.5, canvas.width * 0.8];
+            if(playerActualX === 0) playerActualX = lanes[1];
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        let touchStartX = 0;
+        canvas.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; });
+        canvas.addEventListener('touchend', e => {
+            if(!isGameRunning || isWarningActive) return;
+            let touchEndX = e.changedTouches[0].screenX;
+            if (touchEndX < touchStartX - 30 && currentLane > 0) currentLane--;
+            if (touchEndX > touchStartX + 30 && currentLane < 2) currentLane++;
+        });
+        document.addEventListener('keydown', e => {
+            if(!isGameRunning || isWarningActive) return;
+            if(e.key === "ArrowLeft" && currentLane > 0) currentLane--;
+            if(e.key === "ArrowRight" && currentLane < 2) currentLane++;
+        });
+
+        class Obstacle {
+            constructor() {
+                this.lane = Math.floor(Math.random() * 3);
+                this.x = lanes[this.lane];
+                this.y = -60;
+                this.isGood = Math.random() > 0.45;
+                this.emoji = this.isGood ? goodItems[Math.floor(Math.random()*goodItems.length)] : badItems[Math.floor(Math.random()*badItems.length)];
+                this.size = 50;
+            }
+            draw() {
+                ctx.font = `${this.size}px Arial`;
+                ctx.textAlign = "center";
+                ctx.fillText(this.emoji, this.x, this.y);
+            }
+            update() { this.y += gameSpeed; }
+        }
+
+        class SpeedLine {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * -canvas.height;
+                this.length = Math.random() * 40 + 20;
+                this.speed = gameSpeed * 1.2;
+            }
+            draw() {
+                ctx.strokeStyle = "rgba(0, 255, 204, 0.15)";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x, this.y + this.length);
+                ctx.stroke();
+            }
+            update() {
+                this.y += this.speed;
+                if(this.y > canvas.height) { this.y = -100; this.x = Math.random() * canvas.width; }
+            }
+        }
+
+        function startGame() {
+            document.getElementById("start-overlay").classList.add("hidden");
+            document.getElementById("game-over-overlay").classList.add("hidden");
+            document.getElementById("warning-overlay").classList.add("hidden");
+            resizeCanvas();
+            
+            isGameRunning = true;
+            isWarningActive = false;
+            lives = 3;
+            runPoints = 0; sessionCoins = 0; gameSpeed = 8; currentLane = 1;
+            playerActualX = lanes[1];
+            obstacles = []; speedLines = [];
+            
+            if (warningTimerInterval) clearInterval(warningTimerInterval);
+            updateGlobalUI();
+
+            for(let i=0; i<12; i++) speedLines.push(new SpeedLine());
+            gameLoop();
+        }
+
+        function triggerWarning(hitEmoji) {
+            isWarningActive = true; 
+            lives -= 1;
+            updateGlobalUI();
+
+            obstacles = obstacles.filter(o => o.y < canvas.height - 250);
+
+            if (lives <= 0) {
+                gameOver();
+                return;
+            }
+
+            document.getElementById("warn-emoji").innerText = hitEmoji;
+            document.getElementById("warning-overlay").classList.remove("hidden");
+
+            let timeLeft = 1.5;
+            document.getElementById("warn-timer").innerText = `Reanudando en ${timeLeft.toFixed(1)}s...`;
+
+            if (warningTimerInterval) clearInterval(warningTimerInterval);
+
+            warningTimerInterval = setInterval(() => {
+                timeLeft -= 0.5;
+                if (timeLeft > 0) {
+                    document.getElementById("warn-timer").innerText = `Reanudando en ${timeLeft.toFixed(1)}s...`;
+                } else {
+                    clearInterval(warningTimerInterval);
+                    document.getElementById("warning-overlay").classList.add("hidden");
+                    isWarningActive = false; 
+                }
+            }, 500);
+        }
+
+        function gameOver() {
+            isGameRunning = false;
+            cancelAnimationFrame(animationId);
+            document.getElementById("warning-overlay").classList.add("hidden");
+            document.getElementById("game-over-overlay").classList.remove("hidden");
+            
+            let earnedPoints = Math.floor(runPoints / 10);
+            usersData[playerEmoji].coins += sessionCoins;
+            usersData[playerEmoji].points += earnedPoints;
+            
+            document.getElementById("end-coins").innerText = sessionCoins;
+            document.getElementById("end-pts").innerText = earnedPoints;
+            
+            updateGlobalUI();
+        }
+
+        function gameLoop() {
+            if (!isGameRunning) return;
+
+            if (!isWarningActive) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                speedLines.forEach(line => { line.update(); line.draw(); });
+
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(canvas.width * 0.33, 0); ctx.lineTo(canvas.width * 0.33, canvas.height);
+                ctx.moveTo(canvas.width * 0.66, 0); ctx.lineTo(canvas.width * 0.66, canvas.height);
+                ctx.stroke();
+
+                let targetX = lanes[currentLane];
+                playerActualX += (targetX - playerActualX) * 0.25;
+                const playerY = canvas.height - 120;
+                
+                ctx.font = "55px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(playerEmoji, playerActualX, playerY);
+
+                let canSpawn = false;
+                if (obstacles.length === 0) {
+                    canSpawn = true;
+                } else {
+                    let lastObstacle = obstacles[obstacles.length - 1];
+                    if (lastObstacle.y > 220) canSpawn = true;
+                }
+
+                if (canSpawn && Math.random() < 0.3) obstacles.push(new Obstacle());
+
+                for (let i = 0; i < obstacles.length; i++) {
+                    let obs = obstacles[i];
+                    obs.update();
+                    obs.draw();
+
+                    let dist = Math.hypot(obs.x - playerActualX, obs.y - playerY);
+                    
+                    if (dist < 45) {
+                        if (obs.isGood) {
+                            sessionCoins += 5;
+                            document.getElementById("game-score").style.color = "#ffd700";
+                            setTimeout(() => document.getElementById("game-score").style.color = "#00ffcc", 150);
+                            
+                            obstacles.splice(i, 1); i--;
+                            continue;
+                        } else {
+                            triggerWarning(obs.emoji);
+                            obstacles.splice(i, 1); i--;
+                            break; 
+                        }
+                    }
+
+                    if (obs && obs.y > canvas.height + 50) {
+                        obstacles.splice(i, 1); i--;
+                    }
+                }
+
+                if (!isWarningActive) {
+                    runPoints += Math.floor(gameSpeed / 2);
+                    if (runPoints % 400 === 0 && gameSpeed < 15) gameSpeed += 0.3;
+                    document.getElementById("game-score").innerText = `${Math.floor(runPoints/10)} pts`;
+                }
+            }
+            
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        updateGlobalUI();
+    </script>
+</body>
+</html>
